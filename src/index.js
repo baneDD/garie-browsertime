@@ -1,69 +1,69 @@
-const CronJob = require('cron').CronJob
-const express = require('express')
-const serveIndex = require('serve-index')
-const bodyParser = require('body-parser')
+const CronJob = require("cron").CronJob;
+const express = require("express");
+const serveIndex = require("serve-index");
+const bodyParser = require("body-parser");
 
-const collect = require('./routes/collect')
-const logger = require('./utils/logger')
-const config = require('../config')
+const collect = require("./routes/collect");
+const logger = require("./utils/logger");
+const config = require("../config");
 
-const { init, saveData } = require('./influx')
+const { init, saveData } = require("./influx");
 
-const { getData } = require('./browser-time')
+const { getData } = require("./browser-time");
 
-const app = express()
-app.use(bodyParser.json())
+const app = express();
+app.use(bodyParser.json());
 
-const { urls, cron } = config
+const { urls, cron } = config;
 
-app.use('/collect', collect)
-app.use('/reports', express.static('reports'), serveIndex('reports', { icons: true }))
+app.use("/collect", collect);
+app.use("/reports", express.static("reports"), serveIndex("reports", { icons: true }));
 
 const getDataForAllUrls = async () => {
   for (const item of urls) {
     try {
-      const { url } = item
-      const data = await getData(url)
-      await saveData(url, data)
+      const { url } = item;
+      const data = await getData(url);
+      await saveData(url, data);
     } catch (err) {
-      logger.error(`Failed to parse ${url}`, err)
+      logger.error(`Failed to parse ${url}`, err);
     }
   }
-}
+};
 
 const main = async () => {
-  await init()
+  await init();
 
   try {
     if (cron) {
       return new CronJob(
         cron,
         async () => {
-          getDataForAllUrls()
+          getDataForAllUrls();
         },
         null,
         true,
-        'Europe/London',
+        "America/Toronto",
         null,
         true
-      )
+      );
     }
   } catch (err) {
-    console.log(err)
+    console.log(err);
   }
-}
+};
 
-if (process.env.ENV !== 'test') {
+if (process.env.ENV !== "test") {
   app.listen(3000, async () => {
-    console.log('Application listening on port 3000')
-    await main()
-  })
+    console.log("Application listening on port 3000");
+    await main();
+  });
 }
 
 module.exports = {
   main,
   app
-}
+};
 
 /**
  * Parse the data and store into InfluxDB

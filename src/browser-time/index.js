@@ -1,86 +1,85 @@
-const fs = require('fs')
-const path = require('path')
-const urlParser = require('url')
-const isEmpty = require('lodash.isempty');
-const crypto = require('crypto');
-const flatten = require('flat')
-const child_process = require('child_process')
+const fs = require("fs");
+const path = require("path");
+const urlParser = require("url");
+const isEmpty = require("lodash.isempty");
+const crypto = require("crypto");
+const flatten = require("flat");
+const child_process = require("child_process");
 
-const logger = require('../utils/logger')
+const logger = require("../utils/logger");
 
-const pathNameFromUrl = (url) => {
+const pathNameFromUrl = url => {
   const parsedUrl = urlParser.parse(url),
-    pathSegments = parsedUrl.pathname.split('/');
+    pathSegments = parsedUrl.pathname.split("/");
 
   pathSegments.unshift(parsedUrl.hostname);
 
   if (!isEmpty(parsedUrl.search)) {
-    const md5 = crypto.createHash('md5'),
+    const md5 = crypto.createHash("md5"),
       hash = md5
         .update(parsedUrl.search)
-        .digest('hex')
+        .digest("hex")
         .substring(0, 8);
-    pathSegments.push('query-' + hash);
+    pathSegments.push("query-" + hash);
   }
 
-  return pathSegments.filter(Boolean).join('-');
-}
-
+  return pathSegments.filter(Boolean).join("-");
+};
 
 const filterBrowserTimeData = (report = {}) => {
-  const { statistics = {} } = report
-  return flatten(statistics)
-}
+  const { statistics = {} } = report;
+  return flatten(statistics);
+};
 
-const getBrowserTimeFile = (url = '') => {
+const getBrowserTimeFile = (url = "") => {
   try {
-    const urlWithNoProtocol = pathNameFromUrl(url)
+    const urlWithNoProtocol = pathNameFromUrl(url);
 
-    console.log(`Trying to read file ${urlWithNoProtocol}`)
+    console.log(`Trying to read file ${urlWithNoProtocol}`);
 
-    const dir = path.join(__dirname, '../../reports/browsertime-results', urlWithNoProtocol)
+    const dir = path.join(__dirname, "../../reports/browsertime-results", urlWithNoProtocol);
 
-    const folders = fs.readdirSync(dir)
+    const folders = fs.readdirSync(dir);
 
-    const sortFoldersByTime = folders.sort(function (a, b) {
-      return new Date(b) - new Date(a)
-    })
+    const sortFoldersByTime = folders.sort(function(a, b) {
+      return new Date(b) - new Date(a);
+    });
 
-    const newestFolder = sortFoldersByTime[sortFoldersByTime.length - 1]
+    const newestFolder = sortFoldersByTime[sortFoldersByTime.length - 1];
 
-    const browserTimeFile = fs.readFileSync(path.join(dir, newestFolder, 'browsertime.json'))
+    const browserTimeFile = fs.readFileSync(path.join(dir, newestFolder, "browsertime.json"));
 
-    return Promise.resolve(JSON.parse(browserTimeFile))
+    return Promise.resolve(JSON.parse(browserTimeFile));
   } catch (err) {
-    console.log(err)
-    const message = `Failed to get browsertime file for ${url}`
-    logger.warn(message)
-    return Promise.reject(message)
+    console.log(err);
+    const message = `Failed to get browsertime file for ${url}`;
+    logger.warn(message);
+    return Promise.reject(message);
   }
-}
+};
 
 const getData = async url => {
   return new Promise(async (resolve, reject) => {
     try {
-      const child = child_process.spawn('bash', [path.join(__dirname, './browsertime.sh'), url])
+      const child = child_process.spawn("bash", [path.join(__dirname, "./browsertime.sh"), url]);
 
-      child.on('exit', async () => {
-        logger.info(`Finished getting data for ${url}, trying to get the results`)
-        const data = await getBrowserTimeFile(url).catch(err => reject(`Failed to get data for ${url}`, err))
-        resolve(filterBrowserTimeData(data))
-      })
+      child.on("exit", async () => {
+        logger.info(`Finished getting data for ${url}, trying to get the results`);
+        const data = await getBrowserTimeFile(url).catch(err => reject(`Failed to get data for ${url}`, err));
+        resolve(filterBrowserTimeData(data));
+      });
 
-      child.stdout.pipe(process.stdout)
-      child.stderr.pipe(process.stderr)
+      child.stdout.pipe(process.stdout);
+      child.stderr.pipe(process.stderr);
     } catch (err) {
-      logger.warn(`Failed to get data for ${url}`, err)
-      reject(`Failed to get data for ${url}`)
+      logger.warn(`Failed to get data for ${url}`, err);
+      reject(`Failed to get data for ${url}`);
     }
-  })
-}
+  });
+};
 
 module.exports = {
   getBrowserTimeFile,
   filterBrowserTimeData,
   getData
-}
+};
