@@ -29,7 +29,9 @@
         "flat": "^4.1.0",
         "fs-extra": "^7.0.0",
         "influx": "^5.0.7",
+        "lodash.isempty": "4.4.0",
         "serve-index": "^1.9.1",
+        "url": "^0.11.0",
         "winston": "^3.0.0"
     },
     "devDependencies": {

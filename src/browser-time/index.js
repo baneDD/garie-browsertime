@@ -1,9 +1,31 @@
 const fs = require('fs')
 const path = require('path')
+const urlParser = require('url')
+const isEmpty = require('lodash.isempty');
+const crypto = require('crypto');
 const flatten = require('flat')
 const child_process = require('child_process')
 
 const logger = require('../utils/logger')
+
+const pathNameFromUrl = (url) => {
+  const parsedUrl = urlParser.parse(url),
+    pathSegments = parsedUrl.pathname.split('/');
+
+  pathSegments.unshift(parsedUrl.hostname);
+
+  if (!isEmpty(parsedUrl.search)) {
+    const md5 = crypto.createHash('md5'),
+      hash = md5
+        .update(parsedUrl.search)
+        .digest('hex')
+        .substring(0, 8);
+    pathSegments.push('query-' + hash);
+  }
+
+  return pathSegments.filter(Boolean).join('-');
+}
+
 
 const filterBrowserTimeData = (report = {}) => {
   const { statistics = {} } = report
@@ -12,7 +34,9 @@ const filterBrowserTimeData = (report = {}) => {
 
 const getBrowserTimeFile = (url = '') => {
   try {
-    const urlWithNoProtocol = url.replace(/^https?\:\/\//i, '')
+    const urlWithNoProtocol = pathNameFromUrl(url)
+
+    console.log(`Trying to read file ${urlWithNoProtocol}`)
 
     const dir = path.join(__dirname, '../../reports/browsertime-results', urlWithNoProtocol)
 
